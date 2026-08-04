@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -12,16 +13,22 @@ from .pin import load_pin
 
 
 HELP = """
-maxop easy — plain-language commands (gates still enforce)
+maxop easy — plain English (gates still enforce)
 
-  check              Am I healthy? (pin + selftest + audit if any)
-  write NAME         Write a tiny module NAME.py with a run() stub
-  write NAME --fns a,b,c   Require functions a,b,c
-  status             Show latest ledger / audit in plain English
-  why                Explain what this system refuses to do
+  check | ok | healthy     Am I healthy?
+  status | what happened   Last run in plain English
+  why | help me            What it refuses to do
+  write NAME               Sealed stub NAME.py (needs run())
+  write NAME with a, b     Require functions a, b
+  make / create            Same as write
 
-Workspace defaults to ./ws (or --workspace).
-Nothing commits unless syntax, imports, API, and claim-language clear the pin.
+Also free-form:
+  easy write demo with run and health
+  easy am i ok
+  easy what happened
+
+Workspace: --workspace DIR or MAXOP_WORKSPACE env (default ./ws)
+Nothing is sealed unless syntax, imports, API, and claim-language clear the pin.
 """
 
 
@@ -57,6 +64,7 @@ def easy_write(
     """One-shot: write <name>.py with required fns under full MaxOp gates."""
     fns = fns or ["run"]
     rel = f"{name}.py" if not name.endswith(".py") else name
+    rel = Path(rel).name
     goal = goal or f"easy write {rel}"
     harness = MaxOpHarness(workspace)
     return harness.run(
@@ -78,3 +86,56 @@ def easy_why() -> str:
         f"    (e.g. {lex}…)\n"
         "Refusal is the feature. See CAPABILITIES.md / SOEW.md."
     )
+
+
+def parse_phrase(phrase: str) -> dict[str, Any]:
+    """Map short English to {action, name?, fns?}. Unknown → help."""
+    raw = (phrase or "").strip()
+    s = raw.lower().strip().strip("\"'")
+
+    if not s or s in ("help", "?", "hi", "hello"):
+        return {"action": "help"}
+
+    if s in ("why", "help me", "what is this", "what does this do", "explain"):
+        return {"action": "why"}
+
+    if s in (
+        "check",
+        "ok",
+        "okay",
+        "healthy",
+        "am i ok",
+        "am i okay",
+        "health",
+        "doctor",
+    ):
+        return {"action": "check"}
+
+    if s in (
+        "status",
+        "what happened",
+        "what happened?",
+        "last run",
+        "show",
+        "history",
+    ):
+        return {"action": "status"}
+
+    m = re.match(
+        r"^(?:write|make|create|scaffold|new)\s+([A-Za-z_][\w\-]*)(?:\.py)?"
+        r"(?:\s+(?:with|fns?|functions?)\s+(.+))?$",
+        s,
+        flags=re.I,
+    )
+    if m:
+        name = m.group(1)
+        fns_raw = m.group(2)
+        fns = ["run"]
+        if fns_raw:
+            parts = re.split(r"[,/\s]+and\s+|[,/\s]+", fns_raw)
+            fns = [p.strip() for p in parts if p.strip() and p.strip().isidentifier()]
+            if not fns:
+                fns = ["run"]
+        return {"action": "write", "name": name, "fns": fns}
+
+    return {"action": "help", "note": f"could not parse: {raw!r}"}
