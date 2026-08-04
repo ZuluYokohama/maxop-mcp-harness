@@ -1,19 +1,48 @@
 # maxop-mcp-harness
 
-**Gated MCP-shaped agentic code harness** — Markov loop, pinned floors, cocycle-lite gates, `.maxop` ledger, audit, stdio MCP tools.
+**Gated agentic code harness** with a plain-English front door.
 
-Residual verification substrate. **Not** a claim about AGI, zeta, or "most capable agent of the future."
+Writes code only when syntax, imports, API, and claim-language clear the pin.  
+Refusal is intentional. Residual verification substrate — **not** a claim about AGI or “most capable agent.”
 
-Cross-lab index: **[PORTFOLIO.md](./PORTFOLIO.md)**
-
-## Install (dev)
+## 60-second start
 
 ```bash
 git clone https://github.com/ZuluYokohama/maxop-mcp-harness.git
 cd maxop-mcp-harness
 export PYTHONPATH=src
-python -m maxop_harness.cli selftest
+export MAXOP_WORKSPACE=./ws
+
+python -m maxop_harness write demo with run and health
+python -m maxop_harness am i ok
+python -m maxop_harness what happened
+python -m maxop_harness list
+python -m maxop_harness why
+```
+
+Or: `bash bin/maxop write demo`
+
+| You say | It does |
+|---------|---------|
+| `write NAME with a, b` | Sealed stub `NAME.py` requiring those functions |
+| `am i ok` / `check` | Selftest + plain status |
+| `what happened` | Last ledger + audit |
+| `list` | Sealed files |
+| `why` | What it refuses (and why) |
+
+Unknown phrases → help + short suggestions. Nothing is sealed unless gates pass.
+
+## Power CLI
+
+```bash
+python -m maxop_harness.cli selftest    # G1–G11
 python -m maxop_harness.cli doctor
+python -m maxop_harness.cli pin
+python -m maxop_harness.cli --workspace /tmp/ws run \
+  --goal "stub" \
+  --spec '{"touch_files":["out/a.py"],"required_api":["run"]}'
+python -m maxop_harness.cli --workspace /tmp/ws audit
+python -m maxop_harness.cli mcp         # JSON-RPC stdio
 ```
 
 ## Loop
@@ -25,29 +54,6 @@ IDLE → PLAN → DELEGATE → ACT → VERIFY → COCYCLE → MAXOP → COMMIT �
 
 **COCYCLE:** syntax · import restriction · API surface · lexicon · circular imports  
 **COMMIT:** content hashes + `pin_version` under `.maxop/`
-
-## CLI
-
-| Command | Role |
-|---------|------|
-| `selftest` | G1–G11 planted fixtures |
-| `pin` | Show locked invariants |
-| `run` | Gated write loop |
-| `audit` | Re-verify latest ledger |
-| `doctor` | pin + selftest + audit |
-| `mcp` | JSON-RPC stdio server |
-| `tools` | List MCP tool specs |
-
-```bash
-python -m maxop_harness.cli --workspace /tmp/ws run \
-  --goal "stub" \
-  --spec '{"touch_files":["out/a.py"],"required_api":["run"]}'
-python -m maxop_harness.cli --workspace /tmp/ws audit
-```
-
-## MCP
-
-See `examples/mcp_host_config.json`. Tools include `fs_*`, `harness_run`, `prereg_freeze`, `ledger_audit`.
 
 ## Docs
 
