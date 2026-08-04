@@ -1,14 +1,5 @@
-# Publish status
+# Status
 
-**Complete.** Runtime modules on `main`:
+Published and verified: clone + `PYTHONPATH=src python -m maxop_harness.cli selftest` → **SELFTEST PASS (11/11)**.
 
-- gates · loop · mcp_tools · mcp_server · selftest
-- pin · state · audit · types · agents · cli
-- docs · LICENSE · CAPABILITIES · examples
-
-```bash
-git clone https://github.com/ZuluYokohama/maxop-mcp-harness.git
-cd maxop-mcp-harness
-export PYTHONPATH=src
-python -m maxop_harness.cli selftest
-```
+CI: `.github/workflows/selftest.yml` on push/PR to `main`.

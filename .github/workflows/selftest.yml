@@ -1,0 +1,18 @@
+name: selftest
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planted-fixture selftest G1–G11
+        run: |
+          export PYTHONPATH=src
+          python -m maxop_harness.cli selftest
