@@ -7,7 +7,16 @@ import sys
 from pathlib import Path
 
 from .audit import audit_ledger
-from .easy import HELP as EASY_HELP, easy_why, easy_write, parse_phrase, plain_status
+from .easy import (
+    HELP as EASY_HELP,
+    easy_list,
+    easy_why,
+    easy_write,
+    paint,
+    parse_phrase,
+    plain_status,
+    suggest,
+)
 from .loop import MaxOpHarness, mcp_list_tools
 from .pin import load_pin
 from .selftest import main as selftest_main
@@ -112,6 +121,8 @@ def main(argv: list[str] | None = None) -> int:
                 act = "check"
             elif head in ("status", "show", "history"):
                 act = "status"
+            elif head in ("list", "files"):
+                act = "list"
             elif head in ("why", "explain"):
                 act = "why"
             elif head in ("write", "make", "create", "scaffold", "new"):
@@ -120,6 +131,8 @@ def main(argv: list[str] | None = None) -> int:
 
         if act in ("help",):
             print(EASY_HELP)
+            if phrase:
+                print(suggest(phrase))
             return 0
         if act == "why":
             print(easy_why())
@@ -145,6 +158,9 @@ def main(argv: list[str] | None = None) -> int:
         if act == "status":
             print(plain_status(ws))
             return 0
+        if act == "list":
+            print(easy_list(ws))
+            return 0
         if act == "write":
             if not name:
                 print("usage: easy write NAME")
@@ -152,14 +168,17 @@ def main(argv: list[str] | None = None) -> int:
                 return 2
             led = easy_write(ws, name, fns=fns, goal=args.goal)
             final = led.get("final")
-            print(f"result: {final}")
             if final == "DONE":
+                print(paint(f"result: {final}", "ok"))
                 print(f"wrote: {list((led.get('content_hashes') or {}).keys())}")
                 print(f"sealed under {ws / '.maxop'}")
                 return 0
+            print(paint(f"result: {final}", "bad"))
             print(f"refused: {led.get('abstain_reason') or final}")
             return 1
         print(EASY_HELP)
+        if phrase:
+            print(suggest(phrase))
         return 2
 
     if args.cmd == "audit":
