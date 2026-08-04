@@ -1,0 +1,19 @@
+[project]
+name = "maxop-mcp-harness"
+version = "0.3.1"
+description = "Gated MCP-shaped agentic code harness: Markov loop, pin, selftest, stdio MCP tools"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+maxop-harness = "maxop_harness.cli:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+maxop_harness = ["pin.json"]

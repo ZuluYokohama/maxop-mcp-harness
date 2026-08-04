@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "maxop-harness": {
+      "command": "python3",
+      "args": ["-m", "maxop_harness.cli", "--workspace", "/absolute/path/to/ws", "mcp"],
+      "env": {
+        "MAXOP_WORKSPACE": "/absolute/path/to/ws",
+        "PYTHONPATH": "/absolute/path/to/maxop_mcp_harness/src"
+      }
+    }
+  }
+}
