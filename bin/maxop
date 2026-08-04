@@ -5,13 +5,13 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 export PYTHONPATH="${ROOT}/src${PYTHONPATH:+:$PYTHONPATH}"
 export MAXOP_WORKSPACE="${MAXOP_WORKSPACE:-./ws}"
 if [[ $# -eq 0 ]]; then
-  exec python3 -m maxop_harness.cli easy
+  exec python3 -m maxop_harness
 fi
 case "${1:-}" in
   easy|run|pin|selftest|audit|doctor|mcp|tools)
     exec python3 -m maxop_harness.cli "$@"
     ;;
   *)
-    exec python3 -m maxop_harness.cli easy "$@"
+    exec python3 -m maxop_harness "$@"
     ;;
 esac
