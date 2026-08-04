@@ -1,0 +1,32 @@
+{
+  "pin_version": "1",
+  "ontology": "maxop_pin — locked invariants. Runtime may read; only a human commit may change.",
+  "verdict_vocabulary": ["PASS", "FAIL", "NULL", "ABSTAIN", "NO_VERDICT"],
+  "markov_states": [
+    "IDLE", "PLAN", "DELEGATE", "ACT", "VERIFY", "COCYCLE", "MAXOP", "COMMIT", "ABSTAIN", "FAIL", "DONE"
+  ],
+  "hard_gates": ["syntax_compile", "import_cocycle"],
+  "soft_gates": ["api_surface"],
+  "floors": {
+    "hard_gate_score": 1.0,
+    "maxop_aggregate": 0.99,
+    "api_surface": 1.0
+  },
+  "prohibited_lexicon": [
+    "proves",
+    "proven",
+    "guarantees",
+    "guaranteed",
+    "definitively",
+    "infallible",
+    "revolutionary",
+    "breakthrough",
+    "most capable of the future"
+  ],
+  "claim_fields": ["note", "goal", "detail"],
+  "limits": {
+    "max_cycles_default": 1,
+    "max_file_bytes": 100000,
+    "workspace_escape": "deny"
+  }
+}
