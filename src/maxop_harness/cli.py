@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from .audit import audit_ledger
-from .easy import HELP as EASY_HELP, easy_why, easy_write, plain_status
+from .easy import HELP as EASY_HELP, easy_why, easy_write, parse_phrase, plain_status
 from .loop import MaxOpHarness, mcp_list_tools
 from .pin import load_pin
 from .selftest import main as selftest_main
@@ -15,7 +15,11 @@ from .selftest import main as selftest_main
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="MaxOp MCP-shaped gated code agent harness")
-    p.add_argument("--workspace", default="./ws", help="agent workspace root")
+    p.add_argument(
+        "--workspace",
+        default=os.environ.get("MAXOP_WORKSPACE", "./ws"),
+        help="agent workspace root (or MAXOP_WORKSPACE env)",
+    )
     sub = p.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("tools", help="list MCP-shaped tool specs")
@@ -24,13 +28,16 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("audit", help="re-verify latest ledger hashes + hard gates")
     sub.add_parser("doctor", help="pin load + selftest + optional workspace audit")
     sub.add_parser("mcp", help="run MCP stdio server (MAXOP_WORKSPACE=...)")
+
     s_easy = sub.add_parser("easy", help="plain-language front door (same gates)")
     s_easy.add_argument(
-        "action", nargs="?", default="help", help="check | write | status | why | help"
+        "words",
+        nargs="*",
+        help="action/name or English words, e.g. write demo with run",
     )
-    s_easy.add_argument("name", nargs="?", help="module name for write")
-    s_easy.add_argument("--fns", default="run", help="comma-separated required functions")
+    s_easy.add_argument("--fns", default=None, help="comma-separated required functions")
     s_easy.add_argument("--goal", default=None, help="optional goal text")
+
     s_run = sub.add_parser("run", help="run Markov gated loop")
     s_run.add_argument("--goal", required=True)
     s_run.add_argument(
@@ -84,8 +91,34 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "easy":
         ws = Path(args.workspace)
         ws.mkdir(parents=True, exist_ok=True)
-        act = (args.action or "help").lower()
-        if act in ("help", "-h", "--help"):
+        words = list(args.words or [])
+        phrase = " ".join(words).strip()
+        if not phrase:
+            print(EASY_HELP)
+            return 0
+
+        parsed = parse_phrase(phrase)
+        act = parsed.get("action", "help")
+        name = parsed.get("name")
+        fns = parsed.get("fns")
+        if args.fns:
+            fns = [x.strip() for x in args.fns.split(",") if x.strip()]
+        if not fns:
+            fns = ["run"]
+
+        if act == "help" and words:
+            head = words[0].lower()
+            if head in ("ok", "healthy", "health", "doctor", "check"):
+                act = "check"
+            elif head in ("status", "show", "history"):
+                act = "status"
+            elif head in ("why", "explain"):
+                act = "why"
+            elif head in ("write", "make", "create", "scaffold", "new"):
+                act = "write"
+                name = name or (words[1] if len(words) > 1 else None)
+
+        if act in ("help",):
             print(EASY_HELP)
             return 0
         if act == "why":
@@ -113,11 +146,11 @@ def main(argv: list[str] | None = None) -> int:
             print(plain_status(ws))
             return 0
         if act == "write":
-            if not args.name:
-                print("usage: easy write NAME [--fns run,health]")
+            if not name:
+                print("usage: easy write NAME")
+                print("   or: easy write greeter with run and health")
                 return 2
-            fns = [x.strip() for x in args.fns.split(",") if x.strip()]
-            led = easy_write(ws, args.name, fns=fns, goal=args.goal)
+            led = easy_write(ws, name, fns=fns, goal=args.goal)
             final = led.get("final")
             print(f"result: {final}")
             if final == "DONE":
