@@ -4,6 +4,8 @@
 
 Residual verification substrate. **Not** a claim about AGI, zeta, or "most capable agent of the future."
 
+Cross-lab index: **[PORTFOLIO.md](./PORTFOLIO.md)**
+
 ## Install (dev)
 
 ```bash
@@ -50,6 +52,7 @@ See `examples/mcp_host_config.json`. Tools include `fs_*`, `harness_run`, `prere
 ## Docs
 
 - [CAPABILITIES.md](./CAPABILITIES.md) — works / not included  
+- [PORTFOLIO.md](./PORTFOLIO.md) — residual stack across labs  
 - [CHANGELOG.md](./CHANGELOG.md)
 
 ## License
