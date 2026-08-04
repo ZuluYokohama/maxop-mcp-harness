@@ -1,16 +1,14 @@
 # Publish status
 
-On `main` now: docs, pin, state, audit, types, agents, cli, tests.
+**Complete.** Runtime modules on `main`:
 
-**Still only in local artifacts (copy via `finish_publish.sh`):**
-
-- `src/maxop_harness/gates.py`
-- `src/maxop_harness/loop.py`
-- `src/maxop_harness/mcp_tools.py`
-- `src/maxop_harness/mcp_server.py`
-- `src/maxop_harness/selftest.py`
+- gates · loop · mcp_tools · mcp_server · selftest
+- pin · state · audit · types · agents · cli
+- docs · LICENSE · CAPABILITIES · examples
 
 ```bash
-cd maxop_mcp_harness   # local artifacts copy with full src/
-bash finish_publish.sh
+git clone https://github.com/ZuluYokohama/maxop-mcp-harness.git
+cd maxop-mcp-harness
+export PYTHONPATH=src
+python -m maxop_harness.cli selftest
 ```
