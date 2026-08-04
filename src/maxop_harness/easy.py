@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -17,17 +18,18 @@ maxop easy — plain English (gates still enforce)
 
   check | ok | healthy     Am I healthy?
   status | what happened   Last run in plain English
+  list | files             What files are sealed?
   why | help me            What it refuses to do
   write NAME               Sealed stub NAME.py (needs run())
   write NAME with a, b     Require functions a, b
   make / create            Same as write
 
-Also free-form:
-  easy write demo with run and health
-  easy am i ok
-  easy what happened
+Examples:
+  python -m maxop_harness write demo with run and health
+  python -m maxop_harness am i ok
+  python -m maxop_harness list
 
-Workspace: --workspace DIR or MAXOP_WORKSPACE env (default ./ws)
+Workspace: MAXOP_WORKSPACE or --workspace (default ./ws)
 Nothing is sealed unless syntax, imports, API, and claim-language clear the pin.
 """
 
@@ -61,7 +63,6 @@ def easy_write(
     fns: list[str] | None = None,
     goal: str | None = None,
 ) -> dict[str, Any]:
-    """One-shot: write <name>.py with required fns under full MaxOp gates."""
     fns = fns or ["run"]
     rel = f"{name}.py" if not name.endswith(".py") else name
     rel = Path(rel).name
@@ -71,6 +72,49 @@ def easy_write(
         goal,
         spec={"touch_files": [rel], "required_api": fns, "notes": "easy-mode"},
     )
+
+
+def easy_list(workspace: Path) -> str:
+    d = workspace / ".maxop"
+    if not d.exists():
+        return "Nothing sealed yet. Try: write demo"
+    lines = []
+    latest = d / "ledger_latest.json"
+    if latest.exists():
+        led = json.loads(latest.read_text(encoding="utf-8"))
+        hashes = led.get("content_hashes") or {}
+        if hashes:
+            lines.append("Sealed (latest run):")
+            for rel, h in hashes.items():
+                exists = "ok" if (workspace / rel).exists() else "MISSING"
+                lines.append(f"  {rel}  [{exists}]  {h}")
+        else:
+            lines.append("Latest run sealed no files.")
+    runs = d / "runs.jsonl"
+    if runs.exists():
+        n = sum(1 for _ in runs.open())
+        lines.append(f"Total runs recorded: {n}")
+    return "\n".join(lines) if lines else "Nothing sealed yet."
+
+
+def suggest(phrase: str) -> str:
+    tips = [
+        "write demo",
+        "write greeter with run and health",
+        "am i ok",
+        "what happened",
+        "why",
+        "list",
+    ]
+    return "Try one of:\n  · " + "\n  · ".join(tips)
+
+
+def paint(msg: str, kind: str = "info") -> str:
+    if not sys.stdout.isatty():
+        return msg
+    codes = {"ok": "\033[32m", "bad": "\033[31m", "info": "\033[36m", "end": "\033[0m"}
+    c = codes.get(kind, codes["info"])
+    return f"{c}{msg}{codes['end']}"
 
 
 def easy_why() -> str:
@@ -89,7 +133,6 @@ def easy_why() -> str:
 
 
 def parse_phrase(phrase: str) -> dict[str, Any]:
-    """Map short English to {action, name?, fns?}. Unknown → help."""
     raw = (phrase or "").strip()
     s = raw.lower().strip().strip("\"'")
 
@@ -100,24 +143,15 @@ def parse_phrase(phrase: str) -> dict[str, Any]:
         return {"action": "why"}
 
     if s in (
-        "check",
-        "ok",
-        "okay",
-        "healthy",
-        "am i ok",
-        "am i okay",
-        "health",
-        "doctor",
+        "check", "ok", "okay", "healthy", "am i ok", "am i okay", "health", "doctor",
     ):
         return {"action": "check"}
 
+    if s in ("list", "files", "show files", "what is sealed"):
+        return {"action": "list"}
+
     if s in (
-        "status",
-        "what happened",
-        "what happened?",
-        "last run",
-        "show",
-        "history",
+        "status", "what happened", "what happened?", "last run", "show", "history",
     ):
         return {"action": "status"}
 
