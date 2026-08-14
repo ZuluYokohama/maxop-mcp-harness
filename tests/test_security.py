@@ -167,9 +167,15 @@ class MaxOpSecurityTests(unittest.TestCase):
     def test_second_replace_failure_rolls_back_first_file_and_directories(self) -> None:
         real_replace = os.replace
         second = self.workspace / "nested" / "two.py"
+        live_root = self.workspace.resolve()
 
         def flaky_replace(source: str | os.PathLike[str], target: str | os.PathLike[str]) -> None:
-            if Path(target) == second:
+            target_path = Path(target).resolve(strict=False)
+            try:
+                live_relative = target_path.relative_to(live_root).as_posix()
+            except ValueError:
+                live_relative = None
+            if live_relative == "nested/two.py":
                 raise OSError("injected second-target failure")
             real_replace(source, target)
 
@@ -189,20 +195,24 @@ class MaxOpSecurityTests(unittest.TestCase):
     def test_rollback_failure_is_reported_as_uncertain(self) -> None:
         first = self.workspace / "one.py"
         first.write_text("original = True\n", encoding="utf-8")
-        second = self.workspace / "two.py"
         real_replace = os.replace
         first_replacements = 0
+        live_root = self.workspace.resolve()
 
         def fail_commit_and_restore(
             source: str | os.PathLike[str], target: str | os.PathLike[str]
         ) -> None:
             nonlocal first_replacements
-            target_path = Path(target)
-            if target_path == first:
+            target_path = Path(target).resolve(strict=False)
+            try:
+                live_relative = target_path.relative_to(live_root).as_posix()
+            except ValueError:
+                live_relative = None
+            if live_relative == "one.py":
                 first_replacements += 1
                 if first_replacements == 2:
                     raise OSError("injected restore failure")
-            if target_path == second:
+            if live_relative == "two.py":
                 raise OSError("injected second-target failure")
             real_replace(source, target)
 
