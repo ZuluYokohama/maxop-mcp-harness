@@ -7,7 +7,6 @@ Workspace: MAXOP_WORKSPACE env (default cwd).
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import sys
@@ -18,6 +17,7 @@ from typing import Any
 from . import __version__
 from .loop import MaxOpHarness
 from .mcp_tools import CodebaseTools
+from .prereg import canonical_spec, prereg_sha256
 from .audit import audit_ledger
 
 
@@ -26,7 +26,12 @@ def _workspace() -> Path:
 
 
 def _tools() -> CodebaseTools:
-    return CodebaseTools(_workspace())
+    allow_raw_write = os.environ.get("MAXOP_ALLOW_RAW_WRITE", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+    }
+    return CodebaseTools(_workspace(), allow_writes=allow_raw_write)
 
 
 def _harness_specs() -> list[dict[str, Any]]:
@@ -42,6 +47,10 @@ def _harness_specs() -> list[dict[str, Any]]:
                 "type": "object",
                 "properties": {
                     "goal": {"type": "string"},
+                    "prereg_sha256": {
+                        "type": "string",
+                        "description": "Digest returned by prereg_freeze for this exact goal/spec",
+                    },
                     "touch_files": {
                         "type": "array",
                         "items": {"type": "string"},
@@ -59,7 +68,7 @@ def _harness_specs() -> list[dict[str, Any]]:
                     },
                     "notes": {"type": "string", "default": ""},
                 },
-                "required": ["goal"],
+                "required": ["goal", "prereg_sha256"],
             },
         },
         {
@@ -86,27 +95,22 @@ def _harness_specs() -> list[dict[str, Any]]:
 
 def _call_harness_run(arguments: dict[str, Any]) -> dict[str, Any]:
     goal = arguments["goal"]
-    spec = {
-        "touch_files": arguments.get("touch_files") or ["agent_out/module.py"],
-        "required_api": arguments.get("required_api") or ["run"],
-        "notes": arguments.get("notes") or "",
-    }
+    spec = canonical_spec(arguments)
     body = arguments.get("body")
-    blob = json.dumps({"goal": goal, "spec": spec}, sort_keys=True, separators=(",", ":"))
-    prereg = hashlib.sha256(blob.encode()).hexdigest()
+    prereg = arguments.get("prereg_sha256")
+    if not isinstance(prereg, str):
+        raise ValueError("harness_run requires prereg_sha256 from prereg_freeze")
     t0 = time.perf_counter()
     harness = MaxOpHarness(_workspace())
-    ledger = harness.run(goal, spec=spec, body=body)
-    ledger["prereg_sha256"] = prereg
+    ledger = harness.run(goal, spec=spec, body=body, prereg_sha256=prereg)
     ledger["ms"] = (time.perf_counter() - t0) * 1e3
     return ledger
 
 
 def _call_prereg_freeze(arguments: dict[str, Any]) -> dict[str, Any]:
     goal = arguments["goal"]
-    spec = arguments.get("spec") or {}
-    blob = json.dumps({"goal": goal, "spec": spec}, sort_keys=True, separators=(",", ":"))
-    digest = hashlib.sha256(blob.encode()).hexdigest()
+    spec = canonical_spec(arguments.get("spec"))
+    digest = prereg_sha256(goal, spec)
     return {
         "prereg_sha256": digest,
         "goal": goal,
@@ -116,10 +120,25 @@ def _call_prereg_freeze(arguments: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def handle(msg: dict[str, Any]) -> dict[str, Any] | None:
+def handle(msg: Any) -> dict[str, Any] | None:
+    if not isinstance(msg, dict):
+        return {
+            "jsonrpc": "2.0",
+            "id": None,
+            "error": {"code": -32600, "message": "Invalid Request: object required"},
+        }
     mid = msg.get("id")
     method = msg.get("method")
-    params = msg.get("params") or {}
+    raw_params = msg.get("params", {})
+    if raw_params is None:
+        raw_params = {}
+    if not isinstance(raw_params, dict):
+        return {
+            "jsonrpc": "2.0",
+            "id": mid,
+            "error": {"code": -32602, "message": "Invalid params: object required"},
+        }
+    params = raw_params
 
     if method == "initialize":
         return {
@@ -141,7 +160,16 @@ def handle(msg: dict[str, Any]) -> dict[str, Any] | None:
 
     if method == "tools/call":
         name = params.get("name")
-        arguments = params.get("arguments") or {}
+        arguments = params.get("arguments", {})
+        if not isinstance(name, str) or not isinstance(arguments, dict):
+            return {
+                "jsonrpc": "2.0",
+                "id": mid,
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid params: tool name string and arguments object required",
+                },
+            }
         try:
             if name == "harness_run":
                 content = _call_harness_run(arguments)

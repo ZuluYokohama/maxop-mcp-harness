@@ -31,7 +31,7 @@ TRANSITIONS: dict[MarkState, set[MarkState]] = {
     MarkState.VERIFY: {MarkState.COCYCLE, MarkState.FAIL},
     MarkState.COCYCLE: {MarkState.MAXOP, MarkState.ABSTAIN, MarkState.FAIL},
     MarkState.MAXOP: {MarkState.COMMIT, MarkState.ABSTAIN, MarkState.FAIL},
-    MarkState.COMMIT: {MarkState.DONE, MarkState.PLAN},
+    MarkState.COMMIT: {MarkState.DONE, MarkState.PLAN, MarkState.FAIL},
     MarkState.ABSTAIN: {MarkState.DONE},
     MarkState.FAIL: set(),
     MarkState.DONE: set(),
@@ -97,21 +97,31 @@ class StepRecord:
 class RunLedger:
     run_id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
     goal: str = ""
+    spec: dict[str, Any] = field(default_factory=dict)
     states: list[str] = field(default_factory=list)
     steps: list[StepRecord] = field(default_factory=list)
     final: Optional[str] = None
     abstain_reason: Optional[str] = None
     content_hashes: dict[str, str] = field(default_factory=dict)
     pin_version: Optional[str] = None
+    prereg_sha256: Optional[str] = None
+    preregistration_mode: str = "computed_at_run"
+    integrity_status: str = "CLEAN"
+    rollback_error: Optional[str] = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "run_id": self.run_id,
             "goal": self.goal,
+            "spec": self.spec,
             "states": self.states,
             "steps": [s.to_dict() for s in self.steps],
             "final": self.final,
             "abstain_reason": self.abstain_reason,
             "content_hashes": self.content_hashes,
             "pin_version": self.pin_version,
+            "prereg_sha256": self.prereg_sha256,
+            "preregistration_mode": self.preregistration_mode,
+            "integrity_status": self.integrity_status,
+            "rollback_error": self.rollback_error,
         }

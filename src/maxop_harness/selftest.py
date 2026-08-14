@@ -42,7 +42,7 @@ def g3_syntax_fail(tmp: Path) -> None:
 
 def g4_pin_loads() -> None:
     pin = load_pin()
-    assert pin["pin_version"] == "1"
+    assert pin["pin_version"] == "2"
     assert "syntax_compile" in pin["hard_gates"]
     assert pin["floors"]["maxop_aggregate"] <= 1.0
 
@@ -65,7 +65,7 @@ def g6_hashes_and_pin(tmp: Path) -> None:
         spec={"touch_files": ["out/a.py"], "required_api": ["run"]},
     )
     assert led["final"] == "DONE", led
-    assert led.get("pin_version") == "1"
+    assert led.get("pin_version") == "2"
     assert led.get("content_hashes", {}).get("out/a.py")
 
 
@@ -82,27 +82,40 @@ def g7_mcp_list() -> None:
 
 def g8_harness_run_tool(tmp: Path) -> None:
     import os
+    import json as _json
     from .mcp_server import handle
 
     os.environ["MAXOP_WORKSPACE"] = str(tmp)
-    resp = handle(
+    spec = {"touch_files": ["out/m.py"], "required_api": ["run"]}
+    frozen = handle(
         {
             "jsonrpc": "2.0",
             "id": 2,
             "method": "tools/call",
             "params": {
+                "name": "prereg_freeze",
+                "arguments": {"goal": "via mcp", "spec": spec},
+            },
+        }
+    )
+    assert frozen and frozen["result"]["isError"] is False
+    frozen_body = _json.loads(frozen["result"]["content"][0]["text"])
+    resp = handle(
+        {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/call",
+            "params": {
                 "name": "harness_run",
                 "arguments": {
                     "goal": "via mcp",
-                    "touch_files": ["out/m.py"],
-                    "required_api": ["run"],
+                    **spec,
+                    "prereg_sha256": frozen_body["prereg_sha256"],
                 },
             },
         }
     )
     assert resp and resp["result"]["isError"] is False
-    import json as _json
-
     led = _json.loads(resp["result"]["content"][0]["text"])
     assert led["final"] == "DONE"
     assert led.get("prereg_sha256")
@@ -120,10 +133,9 @@ def g11_circular(tmp: Path) -> None:
         spec={"touch_files": ["pkg/a.py", "pkg/b.py", "pkg/__init__.py"], "required_api": ["run"]},
         body=body,
     )
-    assert led["final"] in ("DONE", "ABSTAIN", "FAIL"), led
-    if led["final"] == "ABSTAIN":
-        blob = str(led)
-        assert "circular" in blob or "cocycle" in blob or led.get("abstain_reason")
+    assert led["final"] == "ABSTAIN", led
+    blob = str(led)
+    assert "circular" in blob or "cocycle" in blob or led.get("abstain_reason")
 
 
 def g10_audit(tmp: Path) -> None:
