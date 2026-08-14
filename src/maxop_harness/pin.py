@@ -15,7 +15,7 @@ PIN_PATH = Path(__file__).with_name("pin.json")
 @lru_cache(maxsize=1)
 def load_pin() -> dict[str, Any]:
     data = json.loads(PIN_PATH.read_text(encoding="utf-8"))
-    if data.get("pin_version") != "1":
+    if data.get("pin_version") != "2":
         raise RuntimeError(f"unsupported pin_version: {data.get('pin_version')}")
     return data
 

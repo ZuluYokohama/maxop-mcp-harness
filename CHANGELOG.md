@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0 (unreleased)
+- bump the ledger/pin contract to v2 for full hashes, preregistration, and integrity markers
+- stage ACT in an isolated workspace and apply only after every gate passes
+- reject traversal, absolute/drive-relative, control, and link/reparse paths
+- default-deny raw MCP filesystem writes
+- bind preregistration in the persisted ledger and use full SHA-256 content hashes
+- constrain `.maxop` state files and add controlled-failure group rollback
+- add cross-platform adversarial transaction, rollback, path, MCP, and audit tests
+
 ## 0.3.1
 - `gate_circular_imports` in COCYCLE (touch-set local graph)
 - `doctor` CLI: pin + selftest + optional audit

@@ -1,6 +1,6 @@
 [project]
 name = "maxop-mcp-harness"
-version = "0.3.4"
+version = "0.4.0"
 description = "Gated MCP-shaped agentic code harness with plain-English easy mode"
 requires-python = ">=3.10"
 dependencies = []

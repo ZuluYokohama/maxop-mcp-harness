@@ -7,6 +7,7 @@ import hashlib
 from pathlib import Path
 from typing import Any
 
+from .mcp_tools import CodebaseTools
 from .pin import floor, hard_gates, lexicon_hits
 from .types import GateVerdict
 
@@ -168,6 +169,10 @@ def gate_circular_imports(workspace: Path, rel_paths: list[str]) -> GateVerdict:
             mod = mod[: -len(".__init__")]
         name_to_path[mod] = rel
         graph.setdefault(mod, set())
+
+    # Parse only after the complete touch-set module map exists. Building edges
+    # during the first pass made detection depend on input ordering.
+    for mod, rel in name_to_path.items():
         p = workspace / rel
         if not p.exists():
             continue
@@ -221,7 +226,13 @@ def gate_circular_imports(workspace: Path, rel_paths: list[str]) -> GateVerdict:
 
 
 def content_hash(workspace: Path, rel: str) -> str:
-    p = workspace / rel
-    if not p.exists():
+    try:
+        p = CodebaseTools(workspace)._safe(rel)
+    except (PermissionError, ValueError):
         return ""
-    return hashlib.sha256(p.read_bytes()).hexdigest()[:16]
+    if not p.is_file():
+        return ""
+    try:
+        return hashlib.sha256(p.read_bytes()).hexdigest()
+    except OSError:
+        return ""

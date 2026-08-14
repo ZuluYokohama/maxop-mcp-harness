@@ -1,5 +1,5 @@
 {
-  "pin_version": "1",
+  "pin_version": "2",
   "ontology": "maxop_pin — locked invariants. Runtime may read; only a human commit may change.",
   "verdict_vocabulary": ["PASS", "FAIL", "NULL", "ABSTAIN", "NO_VERDICT"],
   "markov_states": [
